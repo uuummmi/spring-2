@@ -285,7 +285,7 @@
         simT += dtStep;
       }
 
-      // Populate Table (limit display to prevent DOM overload, e.g., first 100 rows)
+      // Populate Table (limit display to prevent DOM overload, e.g., first 150 rows)
       const displayLogs = exportedDataLogs.slice(0, 150);
       displayLogs.forEach(row => {
         const tr = document.createElement('tr');

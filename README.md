@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>互動式彈簧阻尼簡諧運動模擬器</title>
+  <title>互動式彈簧阻尼簡諧運動模擬器與數據匯出</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -26,7 +26,7 @@
         <h1 class="text-2xl font-bold text-indigo-600 flex items-center gap-2">
           <span>🌀</span> 彈簧阻尼簡諧運動模擬器
         </h1>
-        <p class="text-xs text-slate-500 mt-1">Damped Harmonic Motion Interactive Physics Simulator</p>
+        <p class="text-xs text-slate-500 mt-1">Damped Harmonic Motion Simulator with Data Export</p>
       </div>
       <div id="statusBadge" class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
         欠阻尼 (Underdamped)
@@ -47,7 +47,7 @@
           </h2>
           <span class="text-xs text-slate-400" id="timeDisplay">時間 t = 0.00 s</span>
         </div>
-        <canvas id="simCanvas" class="w-full h-72 border border-slate-100 rounded-lg bg-slate-50 cursor-grab active:cursor-grabbing"></canvas>
+        <canvas id="simCanvas" class="w-full h-64 border border-slate-100 rounded-lg bg-slate-50 cursor-grab active:cursor-grabbing"></canvas>
       </div>
 
       <!-- Real-time x-t Graph Canvas -->
@@ -55,7 +55,36 @@
         <h2 class="text-sm font-bold text-slate-600 mb-2 flex items-center gap-1">
           <span>📈</span> 位移 - 時間圖 (x - t Graph)
         </h2>
-        <canvas id="graphCanvas" class="w-full h-36 border border-slate-100 rounded-lg bg-slate-50"></canvas>
+        <canvas id="graphCanvas" class="w-full h-32 border border-slate-100 rounded-lg bg-slate-50"></canvas>
+      </div>
+
+      <!-- Exported Data Table Section -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-sm font-bold text-slate-600 flex items-center gap-1">
+            <span>📋</span> 模擬數據輸出報表 (Data Log)
+          </h2>
+          <button id="downloadCsvBtn" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium py-1.5 px-3 rounded-lg transition shadow-sm">
+            📥 下載 CSV 數據
+          </button>
+        </div>
+        <div class="max-h-40 overflow-y-auto border border-slate-100 rounded-lg">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-100 text-slate-600 sticky top-0">
+              <tr>
+                <th class="p-2 border-b">時間 t (s)</th>
+                <th class="p-2 border-b">位移 x (m)</th>
+                <th class="p-2 border-b">速度 v (m/s)</th>
+                <th class="p-2 border-b">加速度 a (m/s²)</th>
+              </tr>
+            </thead>
+            <tbody id="dataTableBody" class="text-slate-600">
+              <tr>
+                <td colspan="4" class="p-4 text-center text-slate-400">尚未執行數據輸出，請於右側設定時間後點擊「執行模擬與輸出數據」。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -66,7 +95,7 @@
       <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col justify-between">
         <h2 class="text-base font-bold text-slate-700 mb-4 border-b pb-2">⚙️ 物理參數控制 (Parameters)</h2>
         
-        <div class="space-y-5">
+        <div class="space-y-4">
           <!-- Mass m -->
           <div>
             <div class="flex justify-between text-sm font-medium mb-1">
@@ -93,23 +122,36 @@
             </div>
             <input type="range" id="bSlider" min="0" max="15" step="0.1" value="1.0" class="w-full accent-indigo-600">
           </div>
+
+          <!-- Simulation Duration Input -->
+          <div class="pt-2 border-t border-slate-100">
+            <div class="flex justify-between text-sm font-medium mb-1">
+              <label for="durationInput" class="text-slate-600">輸出模擬時長 (秒):</label>
+            </div>
+            <input type="number" id="durationInput" min="1" max="30" value="5" class="w-full p-2 border border-slate-300 rounded-lg text-sm text-indigo-600 font-bold focus:outline-none focus:border-indigo-500">
+          </div>
         </div>
 
         <!-- Buttons -->
-        <div class="grid grid-cols-3 gap-2 mt-6">
-          <button id="pauseBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-3 rounded-lg text-sm transition shadow-sm">
+        <div class="grid grid-cols-3 gap-2 mt-4">
+          <button id="pauseBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-2 rounded-lg text-xs transition shadow-sm">
             ⏸ 暫停
           </button>
-          <button id="resetBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 px-3 rounded-lg text-sm transition border border-slate-200">
+          <button id="resetBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 px-2 rounded-lg text-xs transition border border-slate-200">
             🔄 重置
           </button>
-          <button id="impulseBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 px-3 rounded-lg text-sm transition shadow-sm">
+          <button id="impulseBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 px-2 rounded-lg text-xs transition shadow-sm">
             💥 施加外力
           </button>
         </div>
 
+        <!-- Export Action Button -->
+        <button id="runBatchBtn" class="w-full mt-3 bg-indigo-700 hover:bg-indigo-800 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition shadow-sm flex items-center justify-center gap-2">
+          <span>📊 執行指定時長模擬並輸出數據</span>
+        </button>
+
         <!-- Physical Metrics Readout -->
-        <div class="mt-6 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
+        <div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
           <div class="bg-slate-50 p-2 rounded-lg">
             <div class="text-xs text-slate-400">位移 x</div>
             <div id="dispText" class="text-sm font-bold text-slate-700">0.00 m</div>
@@ -135,7 +177,6 @@
 
   <!-- Simulation Logic Script -->
   <script>
-    // Canvas Setup
     const simCanvas = document.getElementById('simCanvas');
     const simCtx = simCanvas.getContext('2d');
     const graphCanvas = document.getElementById('graphCanvas');
@@ -155,10 +196,10 @@
     let b = 1.0;
 
     // State Variables
-    let x = 1.0;       // Displacement from equilibrium (m)
-    let v = 0.0;       // Velocity (m/s)
-    let a = 0.0;       // Acceleration (m/s²)
-    let t = 0.0;       // Elapsed time (s)
+    let x = 1.0;
+    let v = 0.0;
+    let a = 0.0;
+    let t = 0.0;
     let isRunning = true;
     let isDragging = false;
 
@@ -181,6 +222,13 @@
     const dispText = document.getElementById('dispText');
     const velText = document.getElementById('velText');
     const accText = document.getElementById('accText');
+    
+    const durationInput = document.getElementById('durationInput');
+    const runBatchBtn = document.getElementById('runBatchBtn');
+    const dataTableBody = document.getElementById('dataTableBody');
+    const downloadCsvBtn = document.getElementById('downloadCsvBtn');
+
+    let exportedDataLogs = [];
 
     // Event Listeners for Sliders
     massSlider.addEventListener('input', (e) => {
@@ -199,7 +247,6 @@
       updateDampingStatus();
     });
 
-    // Control Buttons
     pauseBtn.addEventListener('click', () => {
       isRunning = !isRunning;
       pauseBtn.textContent = isRunning ? '⏸ 暫停' : '▶ 開始';
@@ -216,7 +263,60 @@
     });
 
     impulseBtn.addEventListener('click', () => {
-      v += 3.0; // Apply sudden impulse speed
+      v += 3.0;
+    });
+
+    // Batch simulation & Data export logic
+    runBatchBtn.addEventListener('click', () => {
+      const duration = parseFloat(durationInput.value) || 5.0;
+      const dtStep = 0.05; // Sample every 0.05 seconds for table
+      let simX = x;
+      let simV = v;
+      let simT = 0;
+      
+      exportedDataLogs = [];
+      dataTableBody.innerHTML = '';
+
+      while (simT <= duration) {
+        let simA = (-k * simX - b * simV) / m;
+        exportedDataLogs.push({ t: simT, x: simX, v: simV, a: simA });
+        
+        simV += simA * dtStep;
+        simX += simV * dtStep;
+        simT += dtStep;
+      }
+
+      // Populate Table (limit display to prevent DOM overload, e.g., first 100 rows)
+      const displayLogs = exportedDataLogs.slice(0, 150);
+      displayLogs.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b hover:bg-slate-50';
+        tr.innerHTML = `
+          <td class="p-2">${row.t.toFixed(2)}</td>
+          <td class="p-2 font-medium text-indigo-600">${row.x.toFixed(4)}</td>
+          <td class="p-2">${row.v.toFixed(4)}</td>
+          <td class="p-2">${row.a.toFixed(4)}</td>
+        `;
+        dataTableBody.appendChild(tr);
+      });
+
+      downloadCsvBtn.classList.remove('hidden');
+    });
+
+    // Download CSV
+    downloadCsvBtn.addEventListener('click', () => {
+      if (exportedDataLogs.length === 0) return;
+      let csvContent = "data:text/csv;charset=utf-8,Time(s),Displacement(m),Velocity(m/s),Acceleration(m/s^2)\r\n";
+      exportedDataLogs.forEach(row => {
+        csvContent += `${row.t.toFixed(3)},${row.x.toFixed(4)},${row.v.toFixed(4)},${row.a.toFixed(4)}\r\n`;
+      });
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `damped_motion_m${m}_k${k}_b${b}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     });
 
     // Mouse Dragging Simulation
@@ -229,9 +329,8 @@
     function startDrag(e) {
       const mouseY = getMouseY(e);
       const eqY = simCanvas.height / 3;
-      const scale = 50; // pixels per meter
+      const scale = 50;
       const ballY = eqY + x * scale;
-
       if (Math.abs(mouseY - ballY) < 30) {
         isDragging = true;
         v = 0;
@@ -276,18 +375,15 @@
       }
     }
 
-    // Physics Engine Update (Euler-Cromer)
-    const dt = 0.016; // Time step per frame (~60fps)
+    // Physics Engine Update
+    const dt = 0.016;
     function updatePhysics() {
       if (!isRunning || isDragging) return;
-
-      // F = -k*x - b*v = m*a
       a = (-k * x - b * v) / m;
       v += a * dt;
       x += v * dt;
       t += dt;
 
-      // Record history
       history.push(x);
       if (history.length > maxHistoryLength) {
         history.shift();
@@ -301,9 +397,9 @@
       simCtx.clearRect(0, 0, w, h);
 
       const anchorX = w / 2;
-      const anchorY = 30;
+      const anchorY = 20;
       const eqY = h / 3;
-      const scale = 50; // 1m = 50px
+      const scale = 40;
       const ballY = eqY + x * scale;
 
       // Ceiling
@@ -343,8 +439,8 @@
       }
       simCtx.stroke();
 
-      // Ball / Mass Block
-      const radius = 15 + m * 1.5; // Visual size scales with mass
+      // Ball
+      const radius = 12 + m * 1.2;
       simCtx.beginPath();
       simCtx.arc(anchorX, ballY, radius, 0, Math.PI * 2);
       simCtx.fillStyle = isDragging ? '#f59e0b' : '#4f46e5';
@@ -353,9 +449,8 @@
       simCtx.lineWidth = 2;
       simCtx.stroke();
 
-      // Ball label
       simCtx.fillStyle = '#ffffff';
-      simCtx.font = 'bold 11px sans-serif';
+      simCtx.font = 'bold 10px sans-serif';
       simCtx.textAlign = 'center';
       simCtx.fillText(`${m.toFixed(1)}kg`, anchorX, ballY + 4);
     }
@@ -367,9 +462,8 @@
       graphCtx.clearRect(0, 0, w, h);
 
       const centerY = h / 2;
-      const graphScale = 30; // 1m = 30px on graph
+      const graphScale = 25;
 
-      // Center Reference Line
       graphCtx.strokeStyle = '#e2e8f0';
       graphCtx.lineWidth = 1;
       graphCtx.beginPath();
@@ -379,7 +473,6 @@
 
       if (history.length < 2) return;
 
-      // Draw Waveform
       graphCtx.beginPath();
       graphCtx.strokeStyle = '#0284c7';
       graphCtx.lineWidth = 2;
@@ -394,7 +487,6 @@
       graphCtx.stroke();
     }
 
-    // UI Text Updates
     function updateUI() {
       timeDisplay.textContent = `時間 t = ${t.toFixed(2)} s`;
       dispText.textContent = `${x.toFixed(2)} m`;
@@ -402,7 +494,6 @@
       accText.textContent = `${a.toFixed(2)} m/s²`;
     }
 
-    // Main Loop
     function loop() {
       updatePhysics();
       drawSpringCanvas();
@@ -411,7 +502,6 @@
       requestAnimationFrame(loop);
     }
 
-    // Init
     resizeCanvases();
     updateDampingStatus();
     loop();
